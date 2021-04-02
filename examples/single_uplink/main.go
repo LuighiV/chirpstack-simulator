@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/LuighiV/payload-generator/generator"
 	"github.com/brocaar/chirpstack-api/go/v3/common"
 	"github.com/brocaar/chirpstack-api/go/v3/gw"
 	"github.com/brocaar/chirpstack-simulator/simulator"
@@ -16,7 +17,7 @@ import (
 // This example simulates an OTAA activation and the sending of a single uplink
 // frame, after which the simulation terminates.
 func main() {
-	gatewayID := lorawan.EUI64{1, 1, 1, 1, 1, 1, 1, 1}
+	gatewayID := lorawan.EUI64{100, 127, 218, 255, 254, 0, 127, 159}
 	devEUI := lorawan.EUI64{2, 1, 1, 1, 1, 1, 1, 1}
 	appKey := lorawan.AES128Key{3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 
@@ -24,7 +25,7 @@ func main() {
 	ctx := context.Background()
 
 	sgw, err := simulator.NewGateway(
-		simulator.WithMQTTCredentials("localhost:1883", "", ""),
+		simulator.WithMQTTCredentials("192.168.27.51:1883", "", ""),
 		simulator.WithGatewayID(gatewayID),
 		simulator.WithEventTopicTemplate("gateway/{{ .GatewayID }}/event/{{ .Event }}"),
 		simulator.WithCommandTopicTemplate("gateway/{{ .GatewayID }}/command/{{ .Command }}"),
@@ -33,15 +34,23 @@ func main() {
 		panic(err)
 	}
 
+	gen, err := generator.NewGenerator(
+		39.0, 80.0, 1000.0,
+		0.5, 5, 100,
+	)
+	if err != nil {
+		panic(err)
+	}
 	_, err = simulator.NewDevice(ctx, &wg,
 		simulator.WithDevEUI(devEUI),
 		simulator.WithAppKey(appKey),
 		simulator.WithRandomDevNonce(),
-		simulator.WithUplinkInterval(time.Second),
-		simulator.WithUplinkCount(1),
-		simulator.WithUplinkPayload(true, 10, []byte{1, 2, 3}),
+		simulator.WithGenerator(gen),
+		simulator.WithUplinkInterval(10*time.Second),
+		simulator.WithUplinkCount(0),
+		simulator.WithUplinkPayload(true, 10, []byte{}),
 		simulator.WithUplinkTXInfo(gw.UplinkTXInfo{
-			Frequency:  868100000,
+			Frequency:  915200000,
 			Modulation: common.Modulation_LORA,
 			ModulationInfo: &gw.UplinkTXInfo_LoraModulationInfo{
 				LoraModulationInfo: &gw.LoRaModulationInfo{

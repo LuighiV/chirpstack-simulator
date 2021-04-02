@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/LuighiV/payload-generator/generator"
 	"github.com/brocaar/chirpstack-api/go/v3/gw"
 	"github.com/brocaar/lorawan"
 )
@@ -103,6 +104,9 @@ type Device struct {
 
 	// OTAA delay.
 	otaaDelay time.Duration
+
+	// Generator
+	generator *generator.Generator
 }
 
 // WithAppKey sets the AppKey.
@@ -197,6 +201,14 @@ func WithUplinkTXInfo(txInfo gw.UplinkTXInfo) DeviceOption {
 func WithDownlinkHandlerFunc(f func(confirmed, ack bool, fCntDown uint32, fPort uint8, data []byte) error) DeviceOption {
 	return func(d *Device) error {
 		d.downlinkHandlerFunc = f
+		return nil
+	}
+}
+
+// WithGenerator
+func WithGenerator(gen *generator.Generator) DeviceOption {
+	return func(d *Device) error {
+		d.generator = gen
 		return nil
 	}
 }
@@ -348,6 +360,8 @@ func (d *Device) dataUp() {
 		mType = lorawan.ConfirmedDataUp
 	}
 
+	gen := d.generator
+	generator.Generate(generator.Random)(gen)
 	phy := lorawan.PHYPayload{
 		MHDR: lorawan.MHDR{
 			MType: mType,
@@ -364,7 +378,7 @@ func (d *Device) dataUp() {
 			FPort: &d.fPort,
 			FRMPayload: []lorawan.Payload{
 				&lorawan.DataPayload{
-					Bytes: d.payload,
+					Bytes: generator.GetPayload(gen),
 				},
 			},
 		},
