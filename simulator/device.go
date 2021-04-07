@@ -107,6 +107,9 @@ type Device struct {
 
 	// Generator
 	generator *generator.Generator
+
+	// Generator type
+	generator_type generator.GeneratorType
 }
 
 // WithAppKey sets the AppKey.
@@ -206,9 +209,10 @@ func WithDownlinkHandlerFunc(f func(confirmed, ack bool, fCntDown uint32, fPort 
 }
 
 // WithGenerator
-func WithGenerator(gen *generator.Generator) DeviceOption {
+func WithGenerator(gen *generator.Generator, generator_type generator.GeneratorType) DeviceOption {
 	return func(d *Device) error {
 		d.generator = gen
+		d.generator_type = generator_type
 		return nil
 	}
 }
@@ -360,8 +364,20 @@ func (d *Device) dataUp() {
 		mType = lorawan.ConfirmedDataUp
 	}
 
-	gen := d.generator
-	generator.Generate(generator.Random)(gen)
+	payload := []byte{}
+	if (&generator.Generator{}) != d.generator {
+		gen := d.generator
+
+		if d.generator_type > 0 {
+			generator.Generate(d.generator_type)(gen)
+		} else {
+			generator.Generate(generator.Random)(gen)
+		}
+		payload = generator.GetPayload(gen)
+
+	} else {
+		payload = d.payload
+	}
 	phy := lorawan.PHYPayload{
 		MHDR: lorawan.MHDR{
 			MType: mType,
@@ -378,7 +394,7 @@ func (d *Device) dataUp() {
 			FPort: &d.fPort,
 			FRMPayload: []lorawan.Payload{
 				&lorawan.DataPayload{
-					Bytes: generator.GetPayload(gen),
+					Bytes: payload,
 				},
 			},
 		},

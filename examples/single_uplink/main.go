@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/LuighiV/chirpstack-simulator/simulator"
 	"github.com/LuighiV/payload-generator/generator"
 	"github.com/brocaar/chirpstack-api/go/v3/common"
 	"github.com/brocaar/chirpstack-api/go/v3/gw"
-	"github.com/brocaar/chirpstack-simulator/simulator"
 	"github.com/brocaar/lorawan"
 	log "github.com/sirupsen/logrus"
 )
@@ -35,8 +36,13 @@ func main() {
 	}
 
 	gen, err := generator.NewGenerator(
-		39.0, 80.0, 1000.0,
-		0.5, 5, 100,
+		generator.WithRandomBase(
+			39.0, 80.0, 1000.0,
+			0.5, 5, 100,
+		),
+		generator.WithOWeatherConfig(
+			os.Getenv("OW_API_KEY"), "London",
+		),
 	)
 	if err != nil {
 		panic(err)
@@ -45,9 +51,10 @@ func main() {
 		simulator.WithDevEUI(devEUI),
 		simulator.WithAppKey(appKey),
 		simulator.WithRandomDevNonce(),
-		simulator.WithGenerator(gen),
-		simulator.WithUplinkInterval(10*time.Second),
+		simulator.WithUplinkInterval(20*time.Second),
 		simulator.WithUplinkCount(0),
+		//simulator.WithGenerator(gen, generator.OpenWeather),
+		simulator.WithGenerator(gen, generator.Random),
 		simulator.WithUplinkPayload(true, 10, []byte{}),
 		simulator.WithUplinkTXInfo(gw.UplinkTXInfo{
 			Frequency:  915200000,
